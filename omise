@@ -1,0 +1,157 @@
+#!/bin/bash
+
+OMISE_API_ENDPOINT="https://api.omise.co"
+OMISE_VERSION="0.1-dev"
+OMISE_RELEASE_DATE="N/A"
+OMISE_EXECUTABLE_COMMANDS=("create" "show" "update" "delete" "config")
+OMISE_RESOURCE=("account" "balance" "charge" "charges" "customer" "customers")
+
+the_command=""
+arg_position=0
+arg_0=""
+arg_1=""
+arg_2=""
+arg_3=""
+
+
+# ..
+#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-
+# PUBLIC FUNCTIONS
+#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-
+# ..
+create () { echo 'create'; }
+
+show () {
+    local resource
+
+    for resource in ${OMISE_RESOURCE[@]}; do
+        [[ $resource == $arg_0 ]] && {
+            local endpoint
+            endpoint=$(singular_to_plural $arg_0)
+
+            request_to $endpoint $arg_1
+        }
+    done
+}
+
+update () { echo 'update'; }
+
+delete () { echo 'delete'; }
+
+config () { echo 'config'; }
+
+
+# ..
+#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-
+# PRIVATE FUNCTIONS
+#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-
+# ..
+
+###
+ # Check if a given command can be executed.
+ #
+ # @param $1 string  a given command
+ ##
+isExecutable () {
+    local the_command
+
+    for the_command in ${OMISE_EXECUTABLE_COMMANDS[@]}; do
+        [[ $the_command == $1 ]] && {
+            return 0
+        }
+    done
+
+    return 1
+}
+
+###
+ # @author https://gist.github.com/pkuczynski/8665367
+ ##
+parse_yaml () {
+   local prefix=$2
+   local s='[[:space:]]*' w='[a-zA-Z0-9_]*' fs=$(echo @|tr @ '\034')
+   sed -ne "s|^\($s\)\($w\)$s:$s\"\(.*\)\"$s\$|\1$fs\2$fs\3|p" \
+        -e "s|^\($s\)\($w\)$s:$s\(.*\)$s\$|\1$fs\2$fs\3|p"  $1 |
+   awk -F$fs '{
+      indent = length($1)/2;
+      vname[indent] = $2;
+      for (i in vname) {if (i > indent) {delete vname[i]}}
+      if (length($3) > 0) {
+         vn=""; for (i=0; i<indent; i++) {vn=(vn)(vname[i])("_")}
+         printf("%s%s%s=\"%s\"\n", "'$prefix'",vn, $2, $3);
+      }
+   }'
+}
+
+request_to () {
+    local endpoint
+
+    endpoint=$(build_request)
+    endpoint+="/$1"
+
+    curl $endpoint/$2 \
+        -u $config_omise_secret_key:
+}
+
+build_request () {
+    echo $OMISE_API_ENDPOINT
+}
+
+singular_to_plural () {
+    local singular=("charge" "card" "customer" "dispute" "event" "occurrence" "recipient" "refund" "schedule" "source" "transfer")
+    local string
+
+    for string in ${singular[@]}; do
+        [[ $string == $1 ]] && {
+            string+="s"
+            echo $string
+            exit
+        }
+    done
+
+    echo $1
+}
+
+
+# ..
+#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-
+# EXECUTION AREA
+#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-
+# ..
+eval $(parse_yaml dev.env.yml "config_")
+
+the_command=$1
+if ! isExecutable $the_command; then
+echo -e "
+omise-cli: sorry but, command not found. Cannot execute the command \"$the_command\".
+"
+exit
+fi
+
+# Remove "execute command" from arguments.
+shift
+
+# Reading arguments.
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        *)
+            [[ $arg_position -eq 0 ]] && {
+                arg_0=$1
+
+                arg_position=1
+                shift
+                continue
+            }
+
+            [[ $arg_position -eq 1 ]] && {
+                arg_1=$1
+
+                arg_position=2
+                shift
+                continue
+            }
+            ;;
+    esac
+done
+
+$the_command
