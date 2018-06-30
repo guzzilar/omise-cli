@@ -3,7 +3,7 @@
 OMISE_API_ENDPOINT="https://api.omise.co"
 OMISE_VERSION="0.1-dev"
 OMISE_RELEASE_DATE="N/A"
-OMISE_EXECUTABLE_COMMANDS=("create" "show" "update" "delete" "config")
+OMISE_EXECUTABLE_COMMANDS=("account" "balance" "create" "show" "update" "delete" "config")
 OMISE_RESOURCE=("account" "balance" "charge" "charges" "customer" "customers")
 
 the_command=""
@@ -19,6 +19,9 @@ arg_3=""
 # PUBLIC FUNCTIONS
 #-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-#-
 # ..
+account () { arg_0='account'; show; }
+balance () { arg_0='balance'; show; }
+
 create () { echo 'create'; }
 
 show () {
